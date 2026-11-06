@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Cooking Dede 🥒 - Meglio di Mama!</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Mali:wght@600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="game-container">
+    <!-- Header bar -->
+    <header id="game-header">
+      <div class="header-left">
+        <span class="game-tag">🥒 COOKING DEDE 🥒</span>
+      </div>
+      <div class="header-center" id="stage-banner">
+        <span id="stage-title">Benvenuto in cucina!</span>
+      </div>
+      <div class="header-right">
+        <button id="btn-sound" class="icon-btn" title="Attiva/Disattiva Audio">🔊</button>
+        <button id="btn-music" class="icon-btn" title="Attiva/Disattiva Musica">🎵</button>
+      </div>
+    </header>
+
+    <!-- Top Screen: Dede's Kitchen View & Reaction -->
+    <div id="top-screen">
+      <div class="kitchen-bg">
+        <div class="shelf">
+          <div class="jar jar-1" title="Zucchine sott'olio">🥒</div>
+          <div class="jar jar-2" title="Zucchine essiccate">🥒</div>
+          <div class="jar jar-3" title="Marmellata di zucchine">🥒</div>
+          <div class="recipe-book">📖 1000 Modi per Affettare Zucchine</div>
+        </div>
+        <div class="kitchen-clock">
+          <div class="clock-face">🥒</div>
+        </div>
+      </div>
+
+      <!-- Dede Avatar Canvas -->
+      <div id="dede-stage">
+        <div id="speech-bubble" class="speech-bubble">
+          <span id="dede-speech">"Benvenuto! Oggi cuciniamo... le mie adorate zucchine!"</span>
+        </div>
+        <canvas id="dede-canvas" width="280" height="260"></canvas>
+      </div>
+
+      <!-- Score & Gauge indicators -->
+      <div id="hud-top">
+        <div class="score-pill">
+          <span class="score-label">PUNTI</span>
+          <span id="score-val">0</span>
+        </div>
+        <div class="streak-pill" id="streak-box">
+          <span id="streak-label">COMBO</span>
+          <span id="streak-val">x0</span>
+        </div>
+        <div class="timer-pill" id="timer-box">
+          <span class="timer-icon">⏳</span>
+          <span id="timer-val">15s</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Divider Bar: Nintendo DS Style -->
+    <div id="screen-divider">
+      <div class="divider-notch"></div>
+      <span class="divider-text">COOKING DEDE DS TOUCH SCREEN</span>
+      <div class="divider-notch"></div>
+    </div>
+
+    <!-- Bottom Screen: Interactive Cutting Board / Minigame area -->
+    <div id="bottom-screen">
+      <!-- Title Screen View -->
+      <div id="view-title" class="game-view active">
+        <div class="title-logo-container">
+          <div class="title-mama-badge">NON È MAMA... È</div>
+          <h1 class="game-title">Cooking Dede!</h1>
+          <p class="game-tagline">“Sa fare solo una cosa, ma la fa con tutto il cuore!”</p>
+        </div>
+
+        <div class="title-zucchini-showcase">
+          <div class="floating-zucchini bounce-1">🥒</div>
+          <div class="floating-zucchini bounce-2">🔪</div>
+          <div class="floating-zucchini bounce-3">🥒</div>
+        </div>
+
+        <div class="menu-buttons">
+          <button id="btn-start-recipes" class="btn btn-primary pulse-btn">
+            <span class="btn-icon">📖</span>
+            <span class="btn-text">RICETTARIO DI DEDE</span>
+          </button>
+          <button id="btn-start-arcade" class="btn btn-arcade">
+            <span class="btn-icon">⚔️</span>
+            <span class="btn-text">DEDE DOJO (SOLO ZUCCHINE!)</span>
+          </button>
+          <button id="btn-how-to" class="btn btn-secondary">
+            <span class="btn-icon">💡</span>
+            <span class="btn-text">COME SI GIOCA</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Recipe Selector View -->
+      <div id="view-recipes" class="game-view">
+        <div class="view-header">
+          <h2>Scegli la Ricetta da Preparare!</h2>
+          <p>Tutte garantite al 100% a base di zucchina affettata.</p>
+        </div>
+
+        <div class="recipes-grid">
+          <div class="recipe-card" data-recipe="trifolate">
+            <div class="recipe-icon">🥗</div>
+            <div class="recipe-info">
+              <h3>Zucchine Trifolate</h3>
+              <p class="recipe-desc">Il capolavoro di Dede. Solo rondelle perfette e puro orgoglio!</p>
+              <div class="recipe-steps-tag">2 FASI DI TAGLIO</div>
+            </div>
+            <button class="btn-cook">CUCINA!</button>
+          </div>
+
+          <div class="recipe-card" data-recipe="carbonara">
+            <div class="recipe-icon">🍝</div>
+            <div class="recipe-info">
+              <h3>Carbonara (...senza pasta)</h3>
+              <p class="recipe-desc">“Niente guanciale, niente uova: solo zucchine tagliate fini fini!”</p>
+              <div class="recipe-steps-tag">JULIENNE ESTREMA</div>
+            </div>
+            <button class="btn-cook">CUCINA!</button>
+          </div>
+
+          <div class="recipe-card" data-recipe="sacher">
+            <div class="recipe-icon">🍰</div>
+            <div class="recipe-info">
+              <h3>Torta Sacher alle Zucchine</h3>
+              <p class="recipe-desc">Dede prova a fare un dolce... ma finisce per tagliare 10 zucchine!</p>
+              <div class="recipe-steps-tag">TAGLIO TURBO RAPIDO</div>
+            </div>
+            <button class="btn-cook">CUCINA!</button>
+          </div>
+        </div>
+
+        <button id="btn-back-from-recipes" class="btn btn-back">⬅ Torna al Menu</button>
+      </div>
+
+      <!-- Minigame 1: Rhythm Slicer View -->
+      <div id="view-minigame-rhythm" class="game-view">
+        <div class="minigame-instructions">
+          <span class="instruction-badge">Fase 1</span>
+          <span class="instruction-text">Premi <strong>SPAZIO</strong> o <strong>CLICCA</strong> quando il coltello è sulla linea blu!</span>
+        </div>
+
+        <!-- Cutting Board Area -->
+        <div id="cutting-board-rhythm" class="cutting-board">
+          <canvas id="rhythm-canvas" width="600" height="340"></canvas>
+          <div id="rhythm-hit-feedback" class="hit-feedback"></div>
+        </div>
+
+        <div class="action-bar">
+          <button id="btn-chop-action" class="action-chop-btn">
+            🔪 <span>TAGLIA ADESSO!</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Minigame 2: Rapid Julienne (Spam clicks) View -->
+      <div id="view-minigame-rapid" class="game-view">
+        <div class="minigame-instructions">
+          <span class="instruction-badge">Fase Turbo</span>
+          <span class="instruction-text">CLICCA A RAFFICA o premi SPAZIO per sminuzzare tutto!</span>
+        </div>
+
+        <div class="rapid-meter-container">
+          <div class="meter-label">VELOCITÀ DI DEDE:</div>
+          <div class="meter-track">
+            <div id="rapid-meter-fill" class="meter-fill"></div>
+          </div>
+          <div id="rapid-status-text">PIÙ VELOCE! 🔥</div>
+        </div>
+
+        <div id="cutting-board-rapid" class="cutting-board">
+          <canvas id="rapid-canvas" width="600" height="300"></canvas>
+        </div>
+
+        <div class="action-bar">
+          <button id="btn-rapid-action" class="action-chop-btn rapid-btn">
+            ⚡ <span>AFFETTA VELOCE!</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Minigame 3: Dede Dojo (Reflex Slicer) View -->
+      <div id="view-minigame-dojo" class="game-view">
+        <div class="minigame-instructions">
+          <span class="instruction-badge dojo-badge">DOJO</span>
+          <span class="instruction-text">Clicca/Taglia <strong>SOLO LE ZUCCHINE 🥒</strong>! Se tocchi altre verdure, Dede impazzisce!</span>
+          <div class="lives-container" id="dojo-lives">
+            <span>Vite:</span>
+            <span class="heart">💚</span>
+            <span class="heart">💚</span>
+            <span class="heart">💚</span>
+          </div>
+        </div>
+
+        <div id="dojo-board" class="cutting-board dojo-board">
+          <canvas id="dojo-canvas" width="600" height="350"></canvas>
+          <div id="dojo-feedback" class="hit-feedback"></div>
+        </div>
+      </div>
+
+      <!-- Result Screen View -->
+      <div id="view-result" class="game-view">
+        <div class="result-card">
+          <div class="result-sparkles">✨ 🌟 ✨</div>
+          <h2 id="result-title">EVEN BETTER THAN DEDE!</h2>
+          <div id="result-stars" class="stars-row">
+            <span class="star-icon star-pop-1">⭐</span>
+            <span class="star-icon star-pop-2">⭐</span>
+            <span class="star-icon star-pop-3">⭐</span>
+          </div>
+
+          <div class="result-dish-preview">
+            <div class="dish-plate">
+              <div class="dish-food">🥒🥒🥒</div>
+              <div class="dish-garnish">🌿</div>
+            </div>
+            <div class="dish-name" id="result-dish-name">Trionfo di Zucchine a Rondelle</div>
+          </div>
+
+          <div class="result-score-summary">
+            <div class="stat-row">
+              <span>Punteggio Totale:</span>
+              <strong id="result-total-score">1500</strong>
+            </div>
+            <div class="stat-row">
+              <span>Zucchine Affettate:</span>
+              <strong id="result-zucchini-count">48 fette</strong>
+            </div>
+            <div class="stat-row">
+              <span>Giudizio di Dede:</span>
+              <em id="result-dede-comment">“Sei un vero maestro della lama vegetale!”</em>
+            </div>
+          </div>
+
+          <div class="result-actions">
+            <button id="btn-replay" class="btn btn-primary">🔄 Cucina Ancora!</button>
+            <button id="btn-result-menu" class="btn btn-secondary">🏠 Menu Principale</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- How to play Modal -->
+      <div id="modal-howto" class="modal-backdrop hidden">
+        <div class="modal-content">
+          <h2>Come si Gioca a Cooking Dede 🥒</h2>
+          <div class="howto-item">
+            <div class="howto-icon">🔪</div>
+            <div class="howto-text">
+              <strong>1. Taglio a Ritmo:</strong> Clicca o premi <strong>SPAZIO</strong> quando il coltello si allinea con l'indicatore di taglio. Più sei preciso, più rondelle volano via con stile!
+            </div>
+          </div>
+          <div class="howto-item">
+            <div class="howto-icon">⚡</div>
+            <div class="howto-text">
+              <strong>2. Julienne Rapida:</strong> Clicca o premi SPAZIO come se non ci fosse un domani. Dede entrerà in modalità Super Sayan!
+            </div>
+          </div>
+          <div class="howto-item">
+            <div class="howto-icon">🚨</div>
+            <div class="howto-text">
+              <strong>3. La Regola d'Oro:</strong> Dede sa tagliare e AMA solo le zucchine. Nel Dojo, se tocchi pomodori o carote perderai una vita!
+            </div>
+          </div>
+          <button id="btn-close-howto" class="btn btn-primary">HO CAPITO, VOGLIO AFFETTARE!</button>
+        </div>
+      </div>
+
+    </div> <!-- End of bottom screen -->
+  </div>
+
+  <script src="audio.js"></script>
+  <script src="dede.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
