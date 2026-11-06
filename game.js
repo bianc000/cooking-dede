@@ -1,5 +1,8 @@
 // Cooking Dede - Core Game Engine
-// Manages states, minigames, physics, scoring, and comedic Mama flair!
+// Manages states, minigames, physics, scoring, and Denis's transformations:
+// 1. Muscolosissimo (Gigachad Dede) on good slices / combos!
+// 2. Perde i capelli (Shiny bald) on 1st error!
+// 3. Si taglia un dito (Giant bandaged finger + tears) on 2nd error!
 
 class CookingDedeGame {
   constructor() {
@@ -10,6 +13,7 @@ class CookingDedeGame {
     this.zucchiniCutCount = 0;
     this.timer = 15;
     this.timerInterval = null;
+    this.errorCount = 0; // Tracks mistakes for hair loss -> cut finger progression
 
     // Subsystems
     this.dede = new DedeRenderer('dede-canvas');
@@ -25,7 +29,7 @@ class CookingDedeGame {
     this.dojoState = null;
 
     this.showView('title');
-    this.dede.setState('idle', '“Benvenuto! Oggi cuciniamo... le mie adorate zucchine!”');
+    this.dede.setState('idle', '“Ma cosa ne sapete voi di grigliate... oggi si tagliano solo zucchine!”');
   }
 
   initDOMElements() {
@@ -60,6 +64,7 @@ class CookingDedeGame {
       this.audio.init();
       this.audio.playGood();
       this.showView('recipes');
+      this.dede.resetStatus();
       this.dede.setState('idle', '“Scegli pure qualsiasi ricetta! Tanto io ci metto solo zucchine!”');
     });
 
@@ -82,7 +87,8 @@ class CookingDedeGame {
     document.getElementById('btn-back-from-recipes').addEventListener('click', () => {
       this.audio.playGood();
       this.showView('title');
-      this.dede.setState('idle', '“Non andartene! Le zucchine hanno bisogno di noi!”');
+      this.dede.resetStatus();
+      this.dede.setState('idle', '“Ma cosa ne sapete voi di grigliate... torna presto!”');
     });
 
     // Sound / Music headers
@@ -151,6 +157,7 @@ class CookingDedeGame {
     // Result actions
     document.getElementById('btn-replay').addEventListener('click', () => {
       this.audio.playGood();
+      this.dede.resetStatus();
       if (this.currentRecipe) {
         this.selectRecipe(this.currentRecipe.id);
       } else {
@@ -160,8 +167,8 @@ class CookingDedeGame {
 
     document.getElementById('btn-result-menu').addEventListener('click', () => {
       this.audio.playGood();
+      this.dede.resetStatus();
       this.showView('title');
-      this.dede.setState('idle', '“Che bontà! Tagliamo ancora?”');
     });
   }
 
@@ -200,6 +207,8 @@ class CookingDedeGame {
     this.score = 0;
     this.combo = 0;
     this.zucchiniCutCount = 0;
+    this.errorCount = 0;
+    this.dede.resetStatus();
     this.updateHUD();
 
     const recipes = {
@@ -219,7 +228,7 @@ class CookingDedeGame {
         desc: 'Spaghetti di Zucchina con Crema di Zucchina',
         phases: ['rhythm', 'rapid'],
         quotes: {
-          start: '“Niente pecorino né pasta: solo la nobile cucurbitacea!”',
+          start: '“Niente pecorino né pasta: solo la nobile zucchina!”',
           rapid: '“Riduci la zucchina a striscioline sottilissime!”'
         }
       },
@@ -273,7 +282,6 @@ class CookingDedeGame {
     const canvas = this.rhythmCanvas;
     const ctx = canvas.getContext('2d');
 
-    // Slice indicators configuration
     const totalSlices = 10;
     const slicePositions = [];
     const boardStartX = 140;
@@ -310,7 +318,6 @@ class CookingDedeGame {
       }
     }, 500);
 
-    // Animation Loop
     const loop = () => {
       if (!this.rhythmState || !this.rhythmState.active) return;
       this.updateRhythm();
@@ -330,37 +337,64 @@ class CookingDedeGame {
 
     let rating = 'miss';
     let pts = 0;
-    let comment = '';
 
-    if (diff < 14) {
+    if (diff < 15) {
       rating = 'perfect';
-      pts = 120 + (this.combo * 15);
+      pts = 120 + (this.combo * 20);
       this.combo++;
-      comment = '“Rondella da maestro!”';
       this.audio.playPerfect();
-      this.dede.setState('flame', comment, true);
-    } else if (diff < 32) {
+
+      // HEALING / MUSCLE SCALING ON GOOD CUTS
+      if (this.dede.injuryState !== 'none' && this.combo >= 2) {
+        this.dede.setInjury('none', '“La perfezione del taglio mi ha fatto ricrescere i capelli!”');
+        this.errorCount = 0;
+      }
+
+      // Check muscle growth
+      if (this.combo >= 7) {
+        this.dede.setMuscleLevel(3, '“MA COSA NE SAPETE VOI DI GRIGLIATE?! GIGACHAD DEDE!”');
+      } else if (this.combo >= 4) {
+        this.dede.setMuscleLevel(2, '“GUARDATE QUESTI DELTOIDI DI ZUCCHINA!”');
+      } else if (this.combo >= 2) {
+        this.dede.setMuscleLevel(1, '“Sento i muscoli crescere a ogni rondella!”');
+      }
+
+    } else if (diff < 34) {
       rating = 'good';
       pts = 60;
       this.combo++;
-      comment = '“Bella fetta! Dede approva!”';
       this.audio.playGood();
-      this.dede.setState('happy', comment);
+
+      if (this.combo >= 4 && this.dede.muscleLevel < 2) {
+        this.dede.setMuscleLevel(1, '“Bella fetta! Dede pompa i muscoli!”');
+      } else {
+        this.dede.setState('happy', '“Buona rondella! Continua così!”');
+      }
+
     } else {
+      // MISTAKE! MISS!
       rating = 'miss';
       pts = 10;
       this.combo = 0;
-      comment = '“Un po’ storta, ma è pur sempre una zucchina!”';
-      this.audio.playMiss();
-      this.dede.setState('focus', comment);
+      this.errorCount++;
+
+      // INJURY PROGRESSION: 1st miss = LOSE HAIR! 2nd miss = CUT FINGER!
+      if (this.errorCount === 1 || this.dede.injuryState === 'none') {
+        this.dede.setInjury('bald', '“I MIEI CAPELLI! LO SHOCK MI HA FATTO PERDERE I CAPELLI!”');
+        this.showFeedback(state.feedbackEl, 'CAPELLI PERSI! 👨‍🦲💥', 'miss');
+      } else {
+        this.dede.setInjury('cut_finger', '“AHI! IL MIO DITO! HO AFFETTATO IL DITO INVECE DELLA ZUCCHINA!”');
+        this.showFeedback(state.feedbackEl, 'DITO TAGLIATO! 🩸🩹', 'miss');
+      }
     }
 
     this.score += pts;
     this.zucchiniCutCount++;
     this.updateHUD();
 
-    // Show feedback tag
-    this.showFeedback(state.feedbackEl, rating === 'perfect' ? 'PERFETTO! ✨' : (rating === 'good' ? 'BUONO! 👍' : 'QUASI! 🥒'), rating);
+    if (rating !== 'miss') {
+      this.showFeedback(state.feedbackEl, rating === 'perfect' ? 'PERFETTO! 💪✨' : 'BUONO! 👍', rating);
+    }
 
     // Spawn flying slice
     currentTarget.cut = true;
@@ -400,7 +434,6 @@ class CookingDedeGame {
     const s = this.rhythmState;
     if (!s) return;
 
-    // Move knife back and forth
     s.knifeX += s.knifeSpeed * s.direction;
     if (s.knifeX > s.maxX) {
       s.knifeX = s.maxX;
@@ -410,17 +443,15 @@ class CookingDedeGame {
       s.direction = 1;
     }
 
-    // Flying slices physics
     s.flyingSlices.forEach(sl => {
       sl.x += sl.vx;
       sl.y += sl.vy;
-      sl.vy += 0.4; // gravity
+      sl.vy += 0.4;
       sl.rot += sl.vrot;
       if (sl.y > 300) sl.alpha -= 0.05;
     });
     s.flyingSlices = s.flyingSlices.filter(sl => sl.alpha > 0);
 
-    // Particles
     s.particles.forEach(p => {
       p.x += p.vx;
       p.y += p.vy;
@@ -455,30 +486,26 @@ class CookingDedeGame {
       ctx.stroke();
     }
 
-    // --- ZUCCHINI BODY ON BOARD ---
+    // Zucchini on Board
     const boardStartX = 140;
     const zucchiniWidth = 320;
     const zY = 170;
 
-    // Remaining uncut zucchini segments
     ctx.save();
     ctx.fillStyle = '#2e7d32';
     ctx.strokeStyle = '#1b5e20';
     ctx.lineWidth = 3;
 
-    // Main zucchini cylinder
     ctx.beginPath();
     ctx.roundRect(boardStartX, zY - 32, zucchiniWidth, 64, [32, 8, 8, 32]);
     ctx.fill();
     ctx.stroke();
 
-    // Zucchini shiny highlight & ridges
     ctx.fillStyle = '#43a047';
     ctx.fillRect(boardStartX + 10, zY - 26, zucchiniWidth - 20, 6);
     ctx.fillStyle = '#1b5e20';
     ctx.fillRect(boardStartX + 10, zY + 20, zucchiniWidth - 20, 5);
 
-    // Stem at left end
     ctx.fillStyle = '#33691e';
     ctx.beginPath();
     ctx.roundRect(boardStartX - 22, zY - 10, 22, 20, [8, 0, 0, 8]);
@@ -488,7 +515,6 @@ class CookingDedeGame {
     // Target slicing line markers
     s.slices.forEach((target, idx) => {
       if (idx === s.currentSliceIndex) {
-        // Active pulsing target
         ctx.strokeStyle = '#ff1744';
         ctx.lineWidth = 4;
         ctx.setLineDash([6, 4]);
@@ -498,13 +524,11 @@ class CookingDedeGame {
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // Cut indicator arrow
         ctx.fillStyle = '#ff1744';
         ctx.font = 'bold 18px Fredoka';
         ctx.textAlign = 'center';
         ctx.fillText('▼ TAGLIA!', target.x, zY - 50);
       } else if (!target.cut) {
-        // Future cuts
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
         ctx.lineWidth = 2;
         ctx.setLineDash([4, 4]);
@@ -514,7 +538,6 @@ class CookingDedeGame {
         ctx.stroke();
         ctx.setLineDash([]);
       } else {
-        // Already cut line notch
         ctx.strokeStyle = '#1b5e20';
         ctx.lineWidth = 3;
         ctx.beginPath();
@@ -524,35 +547,26 @@ class CookingDedeGame {
       }
     });
 
-    // --- FLYING ZUCCHINI SLICES ---
+    // Flying Slices
     s.flyingSlices.forEach(sl => {
       ctx.save();
       ctx.globalAlpha = sl.alpha;
       ctx.translate(sl.x, sl.y);
       ctx.rotate(sl.rot);
 
-      // Zucchini round slice
-      ctx.fillStyle = '#2e7d32'; // dark skin rim
+      ctx.fillStyle = '#2e7d32';
       ctx.beginPath();
       ctx.arc(0, 0, sl.radius, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = '#e8f5e9'; // juicy pale flesh
+      ctx.fillStyle = '#e8f5e9';
       ctx.beginPath();
       ctx.arc(0, 0, sl.radius - 4, 0, Math.PI * 2);
       ctx.fill();
 
-      // Core seeds
       ctx.fillStyle = '#c8e6c9';
       ctx.beginPath();
       ctx.arc(0, 0, sl.radius * 0.5, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = '#81c784';
-      ctx.beginPath();
-      ctx.arc(-4, -2, 2, 0, Math.PI * 2);
-      ctx.arc(4, -3, 2, 0, Math.PI * 2);
-      ctx.arc(0, 4, 2, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.restore();
@@ -569,15 +583,12 @@ class CookingDedeGame {
       ctx.restore();
     });
 
-    // --- THE MOVING CHEF KNIFE ---
+    // Knife
     ctx.save();
     ctx.translate(s.knifeX, zY - 60);
-
-    // Knife blade shadow
     ctx.fillStyle = 'rgba(0,0,0,0.2)';
     ctx.fillRect(-2, 10, 4, 90);
 
-    // Knife blade
     ctx.fillStyle = '#eceff1';
     ctx.strokeStyle = '#78909c';
     ctx.lineWidth = 2;
@@ -590,11 +601,9 @@ class CookingDedeGame {
     ctx.fill();
     ctx.stroke();
 
-    // Knife edge highlight
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, -58, 2, 85);
 
-    // Knife handle
     ctx.fillStyle = '#4e342e';
     ctx.fillRect(-6, -95, 12, 35);
     ctx.restore();
@@ -644,13 +653,16 @@ class CookingDedeGame {
       this.timer -= 0.5;
       this.updateHUD();
 
-      // Drain rapid power over time if not spamming
       if (this.rapidState && this.rapidState.rapidPower > 0) {
         this.rapidState.rapidPower = Math.max(0, this.rapidState.rapidPower - 8);
         this.updateRapidMeter();
       }
 
       if (this.timer <= 0) {
+        // Ran out of time in rapid -> cut finger!
+        if (this.rapidState.cutProgress < this.rapidState.targetCuts) {
+          this.dede.setInjury('cut_finger', '“NON HO FINITO IN TEMPO E MI SONO TAGLIATO IL DITO!”');
+        }
         this.endRapidMinigame();
       }
     }, 500);
@@ -670,13 +682,12 @@ class CookingDedeGame {
 
     s.cutProgress++;
     this.zucchiniCutCount++;
-    s.rapidPower = Math.min(100, s.rapidPower + 12);
-    s.knifeChopY = 25; // chop down
+    s.rapidPower = Math.min(100, s.rapidPower + 14);
+    s.knifeChopY = 25;
     this.score += 25;
     this.updateHUD();
     this.audio.playChop();
 
-    // Spawn julienne sticks
     for (let i = 0; i < 4; i++) {
       s.zucchiniPiles.push({
         x: 280 + (Math.random() - 0.5) * 80,
@@ -688,11 +699,13 @@ class CookingDedeGame {
       });
     }
 
-    // Anime flame state if power is high
-    if (s.rapidPower > 70) {
-      this.dede.setState('flame', '“NON MI PUÒ FERMARE NESSUNO! JULIENNE PURA!”', true);
-    } else {
-      this.dede.setState('focus', '“Più veloce! Trita, trita, trita!”');
+    // TRANSFORM INTO GIGACHAD WITH SPEED!
+    if (s.rapidPower >= 85) {
+      this.dede.setMuscleLevel(3, '“TURBO DEDE GIGACHAD ATTIVATO! JULIENNE PURA!”');
+    } else if (s.rapidPower >= 50) {
+      this.dede.setMuscleLevel(2, '“POMPARE QUEI BICIPITI!”');
+    } else if (s.rapidPower >= 20) {
+      this.dede.setMuscleLevel(1, '“PIÙ VELOCE!”');
     }
 
     this.updateRapidMeter();
@@ -711,10 +724,10 @@ class CookingDedeGame {
     if (!s) return;
     s.meterFillEl.style.width = `${s.rapidPower}%`;
     if (s.rapidPower > 80) {
-      s.statusEl.innerText = 'TURBO DEDE! 🔥';
+      s.statusEl.innerText = 'TURBO CHAD! 🔥';
       s.statusEl.style.color = '#d50000';
     } else if (s.rapidPower > 40) {
-      s.statusEl.innerText = 'OTTIMO RITMO! ⚡';
+      s.statusEl.innerText = 'OTTIMO RITMO! 💪';
       s.statusEl.style.color = '#f57c00';
     } else {
       s.statusEl.innerText = 'PIÙ VELOCE! 🔪';
@@ -725,10 +738,7 @@ class CookingDedeGame {
   updateRapid() {
     const s = this.rapidState;
     if (!s) return;
-
-    if (s.knifeChopY > 0) {
-      s.knifeChopY -= 5;
-    }
+    if (s.knifeChopY > 0) s.knifeChopY -= 5;
   }
 
   drawRapid(ctx) {
@@ -746,7 +756,7 @@ class CookingDedeGame {
     ctx.lineWidth = 4;
     ctx.strokeRect(40, 20, w - 80, h - 40);
 
-    // Growing mountain of julienne zucchini sticks
+    // Piles of julienne
     s.zucchiniPiles.forEach(stick => {
       ctx.save();
       ctx.translate(stick.x, stick.y);
@@ -756,25 +766,21 @@ class CookingDedeGame {
       ctx.restore();
     });
 
-    // Whole zucchini being sliced away
     const remainingRatio = Math.max(0, 1 - (s.cutProgress / s.targetCuts));
     if (remainingRatio > 0.05) {
       ctx.fillStyle = '#2e7d32';
       ctx.fillRect(160, 140, 220 * remainingRatio, 45);
     }
 
-    // Blurred motion knife chopping down
     ctx.save();
     const knifeX = 280;
     const knifeY = 80 + s.knifeChopY;
 
-    // Afterimage if turbo
     if (s.rapidPower > 60) {
       ctx.fillStyle = 'rgba(255, 235, 59, 0.4)';
       ctx.fillRect(knifeX - 15, knifeY - 40, 30, 80);
     }
 
-    // Big Cleaver
     ctx.fillStyle = '#cfd8dc';
     ctx.strokeStyle = '#78909c';
     ctx.lineWidth = 3;
@@ -783,7 +789,6 @@ class CookingDedeGame {
     ctx.fill();
     ctx.stroke();
 
-    // Wooden cleaver handle
     ctx.fillStyle = '#5d4037';
     ctx.fillRect(knifeX - 8, knifeY - 70, 16, 40);
     ctx.restore();
@@ -810,7 +815,9 @@ class CookingDedeGame {
     this.score = 0;
     this.combo = 0;
     this.zucchiniCutCount = 0;
+    this.errorCount = 0;
     this.timer = 30;
+    this.dede.resetStatus();
     this.stageTitleEl.innerText = 'Dede Dojo (Solo Zucchine!)';
     this.showView('dojo');
     this.updateHUD();
@@ -831,7 +838,7 @@ class CookingDedeGame {
     };
 
     this.updateDojoLivesDisplay();
-    this.dede.setState('focus', '“Taglia SOLO LE ZUCCHINE! Le altre verdure mi fanno orrore!”');
+    this.dede.setState('focus', '“Ma cosa ne sapete voi di grigliate... taglia SOLO LE ZUCCHINE!”');
 
     if (this.timerInterval) clearInterval(this.timerInterval);
     this.timerInterval = setInterval(() => {
@@ -863,7 +870,6 @@ class CookingDedeGame {
     if (!this.dojoState || !this.dojoState.active) return;
     const s = this.dojoState;
 
-    // Check hit items
     for (let i = s.items.length - 1; i >= 0; i--) {
       const item = s.items[i];
       if (item.sliced) continue;
@@ -873,17 +879,30 @@ class CookingDedeGame {
         item.sliced = true;
 
         if (item.isZucchini) {
-          // RIGHT! Zucchini cut!
+          // SLICED A ZUCCHINI!
           this.audio.playChop();
-          this.score += 150 + (this.combo * 20);
+          this.score += 150 + (this.combo * 25);
           this.combo++;
           this.zucchiniCutCount += 2;
           this.updateHUD();
 
-          this.showFeedback(s.feedbackEl, 'BELLA ZUCCHINA! 🥒', 'perfect');
-          this.dede.setState('happy', '“Sì! L’adoro! Più fette per me!”');
+          // HEAL IF PREVIOUSLY INJURED
+          if (this.dede.injuryState !== 'none' && this.combo >= 3) {
+            this.dede.setInjury('none', '“La sacra zucchina mi ha guarito!”');
+            this.errorCount = 0;
+          }
 
-          // Green splash particles
+          // GROW MUSCLES
+          if (this.combo >= 8) {
+            this.dede.setMuscleLevel(3, '“GIGACHAD DELLE ZUCCHINE! POTENZA ASSOLUTA!”');
+          } else if (this.combo >= 5) {
+            this.dede.setMuscleLevel(2, '“GUARDATE CHE DELTOIDI!”');
+          } else if (this.combo >= 2) {
+            this.dede.setMuscleLevel(1, '“Più zucchine affetto, più divento grosso!”');
+          }
+
+          this.showFeedback(s.feedbackEl, 'BELLA ZUCCHINA! 💪🥒', 'perfect');
+
           for (let p = 0; p < 12; p++) {
             s.particles.push({
               x: item.x,
@@ -896,15 +915,21 @@ class CookingDedeGame {
             });
           }
         } else {
-          // WRONG! Non-zucchini vegetable!
+          // SLICED WRONG VEGETABLE!
           this.audio.playMiss();
           s.lives--;
           this.combo = 0;
+          this.errorCount++;
           this.updateHUD();
           this.updateDojoLivesDisplay();
 
-          this.showFeedback(s.feedbackEl, 'NON È UNA ZUCCHINA! 🚨', 'miss');
-          this.dede.setState('shock', `“BLEAH! ${item.name.toUpperCase()}?! CHE SCHIFO!”`, true);
+          if (this.errorCount === 1 || this.dede.injuryState === 'none') {
+            this.dede.setInjury('bald', `“BLEAH! ${item.name.toUpperCase()}?! DALLO SHOCK HO PERSO I CAPELLI!”`);
+            this.showFeedback(s.feedbackEl, 'PELATO DALLO SHOCK! 👨‍🦲', 'miss');
+          } else {
+            this.dede.setInjury('cut_finger', '“AHI! HO TAGLIATO IL DITO! NON ERA UNA ZUCCHINA!”');
+            this.showFeedback(s.feedbackEl, 'DITO TAGLIATO! 🩸🩹', 'miss');
+          }
 
           if (s.lives <= 0) {
             setTimeout(() => {
@@ -922,12 +947,10 @@ class CookingDedeGame {
     const s = this.dojoState;
     if (!s) return;
 
-    // Spawning items
     s.spawnTimer++;
     if (s.spawnTimer > 32) {
       s.spawnTimer = 0;
 
-      // 65% chance of Zucchini, 35% chance of Impostor vegetable!
       const isZucchini = Math.random() < 0.65;
       const impostors = [
         { name: 'Pomodoro', icon: '🍅', color: '#e53935' },
@@ -953,18 +976,15 @@ class CookingDedeGame {
       });
     }
 
-    // Physics
     s.items.forEach(item => {
       item.x += item.vx;
       item.y += item.vy;
-      item.vy += 0.35; // Gravity
+      item.vy += 0.35;
       item.rot += item.vrot;
     });
 
-    // Remove offscreen
     s.items = s.items.filter(item => item.y < 420);
 
-    // Particles
     s.particles.forEach(p => {
       p.x += p.vx;
       p.y += p.vy;
@@ -981,11 +1001,9 @@ class CookingDedeGame {
 
     ctx.clearRect(0, 0, w, h);
 
-    // Dojo Tatami / Kitchen Wood background
     ctx.fillStyle = '#ffe082';
     ctx.fillRect(0, 0, w, h);
 
-    // Dojo bamboo stripes
     ctx.strokeStyle = '#ffd54f';
     ctx.lineWidth = 6;
     for (let x = 0; x < w; x += 40) {
@@ -995,14 +1013,12 @@ class CookingDedeGame {
       ctx.stroke();
     }
 
-    // Draw Vegetables
     s.items.forEach(item => {
       ctx.save();
       ctx.translate(item.x, item.y);
       ctx.rotate(item.rot);
 
       if (item.sliced) {
-        // Sliced halves flying apart
         ctx.font = '28px Arial';
         ctx.fillText(item.icon, -15, 0);
         ctx.fillText(item.icon, 15, 0);
@@ -1012,7 +1028,6 @@ class CookingDedeGame {
         ctx.textBaseline = 'middle';
         ctx.fillText(item.icon, 0, 0);
 
-        // Highlight ring around zucchinis
         if (item.isZucchini) {
           ctx.strokeStyle = 'rgba(76, 175, 80, 0.4)';
           ctx.lineWidth = 3;
@@ -1024,7 +1039,6 @@ class CookingDedeGame {
       ctx.restore();
     });
 
-    // Particles
     s.particles.forEach(p => {
       ctx.save();
       ctx.globalAlpha = p.life;
@@ -1044,7 +1058,7 @@ class CookingDedeGame {
   }
 
   // ==========================================
-  // RESULTS VIEW & RATING (BETTER THAN MAMA!)
+  // RESULTS VIEW & RATING
   // ==========================================
   showResults() {
     this.showView('result');
@@ -1058,7 +1072,7 @@ class CookingDedeGame {
     const dishNameEl = document.getElementById('result-dish-name');
 
     totalScoreEl.innerText = this.score;
-    zucchiniCountEl.innerText = `${this.zucchiniCutCount} fette perfette`;
+    zucchiniCountEl.innerText = `${this.zucchiniCutCount} fette`;
 
     if (this.currentRecipe) {
       dishNameEl.innerText = this.currentRecipe.desc;
@@ -1066,25 +1080,21 @@ class CookingDedeGame {
       dishNameEl.innerText = 'Trionfo del Dojo delle Zucchine';
     }
 
-    // Rating evaluation
     if (this.score >= 1200) {
-      // 3 STARS: EVEN BETTER THAN MAMA!
-      resultTitleEl.innerText = 'EVEN BETTER THAN DEDE! 🥒✨';
+      resultTitleEl.innerText = 'EVEN BETTER THAN DEDE! 💪🥒';
       starsEl.innerHTML = '<span class="star-icon star-pop-1">⭐</span><span class="star-icon star-pop-2">⭐</span><span class="star-icon star-pop-3">⭐</span>';
-      commentEl.innerText = '“INCREDIBILE! Neanche Mama saprebbe tagliare una zucchina con tanta maestria!”';
-      this.dede.setState('flame', '“SONO COMMOSSO! SEI IL MIO EREDE DELLE ZUCCHINE!”', true);
+      commentEl.innerText = '“MA COSA NE SAPETE VOI DI GRIGLIATE?! Sei diventato muscoloso quanto me!”';
+      this.dede.setMuscleLevel(3, '“ESTASI TOTALE! I MIEI BICIPITI BRUCIANO DI GLORIA!”');
     } else if (this.score >= 600) {
-      // 2 STARS: DEDE APPROVA!
       resultTitleEl.innerText = 'BUONO! DEDE APPROVA! 👍';
       starsEl.innerHTML = '<span class="star-icon star-pop-1">⭐</span><span class="star-icon star-pop-2">⭐</span><span class="star-icon" style="opacity:0.3">⭐</span>';
-      commentEl.innerText = '“Bel lavoro! Abbiamo riempito tre ciotole di rondelle croccanti!”';
-      this.dede.setState('happy', '“Bravo! Con qualche altro taglio sarai perfetto!”');
+      commentEl.innerText = '“Bel lavoro! Con un altro paio di zucchine metterai su altri muscoli!”';
+      this.dede.setMuscleLevel(1, '“Bravo! Un fisico discreto e tante zucchine!”');
     } else {
-      // 1 STAR: NON PIANGERE!
       resultTitleEl.innerText = 'NON PIANGERE... C’È DEDE! 💚';
       starsEl.innerHTML = '<span class="star-icon star-pop-1">⭐</span><span class="star-icon" style="opacity:0.3">⭐</span><span class="star-icon" style="opacity:0.3">⭐</span>';
-      commentEl.innerText = '“Non ti preoccupare! Dede taglierà altre mille zucchine per consolarti!”';
-      this.dede.setState('cry', '“Le zucchine sono buone lo stesso... singh!”');
+      commentEl.innerText = '“Tra capelli persi e dita affettate è stata dura... ma Dede ti consolerà!”';
+      this.dede.setInjury('cut_finger', '“Ahi ahi il dito... ma mangerò le zucchine lo stesso!”');
     }
   }
 
@@ -1094,7 +1104,7 @@ class CookingDedeGame {
     el.className = `hit-feedback show ${type}`;
     setTimeout(() => {
       el.className = 'hit-feedback';
-    }, 600);
+    }, 700);
   }
 }
 
